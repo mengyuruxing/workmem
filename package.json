@@ -1,0 +1,57 @@
+{
+  "name": "workmem",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Work-first local memory plugin for DSH: 4 work categories + separate persona, 5 category files, local-only retrieval.",
+  "author": "MOLULISHANGPOLU",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "agent-memory",
+    "work-memory",
+    "local-first"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mengyuruxing/workmem.git"
+  },
+  "homepage": "https://github.com/mengyuruxing/workmem#readme",
+  "bugs": {
+    "url": "https://github.com/mengyuruxing/workmem/issues"
+  },
+  "main": "lib/index.mjs",
+  "exports": {
+    ".": "./lib/index.mjs",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/**",
+    "client.js",
+    "panel/**",
+    "cordis.patch.yml"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    },
+    "manifestVersion": 1
+  }
+}

@@ -1,0 +1,4 @@
+# workmem bundle patch：加载本地记忆插件。
+- insert:
+    - id: workmem
+      name: 'workmem'

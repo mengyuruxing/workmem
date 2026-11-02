@@ -1,0 +1,11 @@
+node_modules/
+*.tmp
+*.log
+*.log.*
+panel-start.log*
+*.bak-*
+.DS_Store
+Thumbs.db
+_snapshots/
+data/
+.workmem/

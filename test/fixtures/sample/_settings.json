@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "coldDays": 14,
+  "mode": {
+    "default": "auto",
+    "locked": false,
+    "fallback": "mixed"
+  },
+  "retrieval": {
+    "topK": 3,
+    "budgetChars": 800,
+    "minCoverage": 0.2,
+    "minCovHard": 0.4,
+    "relBar": 0.62,
+    "minScore": 9,
+    "manualTopK": 50
+  },
+  "health": {
+    "windowTurns": 30,
+    "yellowConsecutiveMiss": 10,
+    "yellowRate": 0.1,
+    "redWriteHours": 24
+  },
+  "deepDive": {
+    "enabled": false
+  }
+}

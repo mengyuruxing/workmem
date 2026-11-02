@@ -1,0 +1,2 @@
+{"ts":"2026-11-02T15:22:00+08:00","type":"turn","sid":"ab54c648","mode":"work","modeSource":"auto","query":"改记忆库之前要做什么","candidates":5,"passed":1,"picked":[{"id":"a1b2c3d4","category":"rules","base":0.72,"categoryWeight":2.0,"importance":1.5,"zone":1.0,"project":1.0,"score":2.16,"reason":"title+kw"}],"missReason":null,"nearMiss":[],"ms":3}
+{"ts":"2026-11-02T15:23:00+08:00","type":"write","ok":true,"id":"d4e5f6a7","category":"progress","actor":"小喵","error":null}

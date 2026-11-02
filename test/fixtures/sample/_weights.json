@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "levels": {
+    "ignore": 0,
+    "low": 0.5,
+    "normal": 1.0,
+    "high": 1.5,
+    "max": 2.0
+  },
+  "importanceFactors": {
+    "1": 0.8,
+    "2": 1.0,
+    "3": 1.25,
+    "4": 1.5
+  },
+  "coldFactor": 0.7,
+  "matrix": {
+    "rules":    { "work": "max",    "mixed": "high",   "companion": "normal" },
+    "facts":    { "work": "high",   "mixed": "normal", "companion": "low" },
+    "pitfalls": { "work": "high",   "mixed": "normal", "companion": "low" },
+    "progress": { "work": "normal", "mixed": "normal", "companion": "low" },
+    "persona":  { "work": "low",    "mixed": "normal", "companion": "max" }
+  }
+}
