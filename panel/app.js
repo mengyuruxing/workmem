@@ -89,6 +89,37 @@ const els = {};
 let searchTimer = null;
 let errorTimer = null;
 
+/* ---------- 主题（localStorage 记住，跟随系统为默认） ---------- */
+const THEME_KEY = 'wm-theme';
+const THEME_ORDER = ['auto', 'light', 'dark'];
+const THEME_LABEL = { auto: '跟随系统', light: '浅色', dark: '深色' };
+const THEME_ICON = { auto: '◐', light: '☀', dark: '☾' };
+
+function currentTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (THEME_ORDER.includes(saved)) return saved;
+  } catch {}
+  return 'auto';
+}
+
+function applyTheme(theme) {
+  const next = THEME_ORDER.includes(theme) ? theme : 'auto';
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+  const root = document.documentElement;
+  if (next === 'auto') root.removeAttribute('data-theme');
+  else root.dataset.theme = next;
+  if (els.themeBtn) {
+    els.themeBtn.textContent = THEME_ICON[next];
+    els.themeBtn.title = '主题：' + THEME_LABEL[next] + '（点一下切换）';
+  }
+}
+
+function cycleTheme() {
+  const cur = currentTheme();
+  applyTheme(THEME_ORDER[(THEME_ORDER.indexOf(cur) + 1) % THEME_ORDER.length]);
+}
+
 function h(tag, attrs, ...children) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs || {})) {
@@ -202,10 +233,15 @@ function renderShell() {
     h('button', { onclick: () => guard(() => refreshList()) }, '搜索'),
     els.searchMeta
   );
+  els.chips = h('div', { class: 'wm-chips' });
   els.list = h('div', { class: 'wm-list' }, h('div', { class: 'wm-empty' }, '正在读取…'));
+  // 命中记录与自检都做成主界面上的页，不另开弹层
+  els.hitPane = h('div', { class: 'wm-pane wm-hit-scroll' }, h('div', { class: 'wm-loading' }, '读取中…'));
+  els.diagPane = h('div', { class: 'wm-pane wm-hit-scroll' }, h('div', { class: 'wm-loading' }, '读取中…'));
+  els.listPane = h('div', { class: 'wm-pane' }, els.searchbar, els.chips, els.list);
 
   els.side = h('aside', { class: 'wm-side' });
-  els.content = h('section', { class: 'wm-content' }, els.searchbar, els.list);
+  els.content = h('section', { class: 'wm-content' }, els.listPane, els.hitPane, els.diagPane);
   els.main = h('div', { class: 'wm-main' }, els.side, els.content);
 
   els.timeline = h('section', { class: 'wm-timeline' });
@@ -213,16 +249,16 @@ function renderShell() {
   els.modalLayer.addEventListener('click', (e) => {
     if (e.target === els.modalLayer) closeDetail();
   });
-  els.diagLayer = h('div', { class: 'wm-modal-bg', hidden: true });
-  els.diagLayer.addEventListener('click', (e) => {
-    if (e.target === els.diagLayer) closeDiagnostics();
-  });
 
-  app.append(els.header, els.error, els.main, els.timeline, els.modalLayer, els.diagLayer, els.settingsLayer);
+  app.append(els.header, els.error, els.main, els.timeline, els.modalLayer, els.settingsLayer);
   document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName || '')) {
+      e.preventDefault();
+      els.searchInput?.focus();
+      return;
+    }
     if (e.key !== 'Escape') return;
     if (state.detail) closeDetail();
-    else if (state.diagnostics) closeDiagnostics();
     else closeSettings();
   });
 }
@@ -255,7 +291,16 @@ function renderHeader() {
         h('span', { class: 'wm-health-line' }, health?.line || '健康数据读取中…'),
         showReason ? h('span', { class: 'wm-health-reason' }, health.reason) : null
       ),
-      h('button', { class: 'wm-ghost', onclick: () => guard(openDiagnostics) }, '自检'),
+      h('div', { class: 'wm-seg wm-viewseg' },
+        h('button', { class: state.view === 'list' ? 'on' : '', onclick: () => setView('list') }, '条目'),
+        h('button', { class: state.view === 'hits' ? 'on' : '', onclick: () => setView('hits') }, '命中'),
+        h('button', { class: state.view === 'diag' ? 'on' : '', onclick: () => setView('diag') }, '自检')
+      ),
+      els.themeBtn = h('button', {
+        class: 'wm-ghost wm-theme',
+        title: '主题：' + THEME_LABEL[currentTheme()] + '（点一下切换）',
+        onclick: () => cycleTheme()
+      }, THEME_ICON[currentTheme()]),
       h('button', { class: 'wm-ghost', onclick: openSettings }, '设置'),
       h('button', { class: 'wm-primary', onclick: openNew }, '新建')
     )
@@ -463,6 +508,53 @@ function renderSide() {
   );
 }
 
+function renderChips() {
+  if (!els.chips) return;
+  const f = state.filters;
+  const counts = state.stats?.categories || {};
+  const catChips = [{ key: 'all', label: '全部' }, ...CATEGORIES].map((c) => h('button', {
+    class: 'wm-chip' + (f.category === c.key ? ' on' : ''),
+    onclick: () => guard(() => setFilter({ category: c.key }))
+  }, c.label, h('span', null, String(c.key === 'all' ? (state.stats?.total ?? 0) : (counts[c.key]?.total ?? 0)))));
+
+  const zoneChips = [
+    { key: 'all', label: '冷暖不限' },
+    { key: 'hot', label: '只看热' },
+    { key: 'cold', label: '只看冷' }
+  ].map((z) => h('button', {
+    class: 'wm-chip' + (f.cold === z.key ? ' on' : ''),
+    onclick: () => guard(() => setFilter({ cold: z.key }))
+  }, z.label));
+
+  const statusChips = [
+    { key: 'active', label: '正常' },
+    { key: 'all', label: '全部状态' },
+    { key: 'archived', label: '已归档' },
+    { key: 'revoked', label: '已作废' }
+  ].map((s) => h('button', {
+    class: 'wm-chip' + (f.status === s.key ? ' on' : ''),
+    onclick: () => guard(() => setFilter({ status: s.key }))
+  }, s.label));
+
+  const dirty = f.category !== 'all' || f.cold !== 'all' || f.status !== 'active' || f.project || f.session || f.source;
+  const reset = dirty
+    ? h('button', {
+      class: 'wm-chip clear',
+      onclick: () => guard(() => setFilter({ category: 'all', cold: 'all', status: 'active', project: '', session: '', source: '' }))
+    }, '清空筛选')
+    : null;
+
+  els.chips.replaceChildren(
+    h('span', { class: 'wm-chips-label' }, '分类'),
+    ...catChips,
+    h('span', { class: 'wm-chips-sep' }),
+    ...zoneChips,
+    h('span', { class: 'wm-chips-sep' }),
+    ...statusChips,
+    reset
+  );
+}
+
 function filteredItems() {
   const items = Array.isArray(state.list) ? state.list : [];
   const f = state.filters;
@@ -500,7 +592,7 @@ function renderList() {
   }
   const cards = items.map((item) => {
     const head = h('div', { class: 'wm-card-head' },
-      h('span', { class: 'wm-badge cat' }, item.categoryLabel || CATEGORY_LABEL[item.category] || item.category),
+      h('span', { class: 'wm-badge cat', 'data-cat': item.category }, item.categoryLabel || CATEGORY_LABEL[item.category] || item.category),
       h('span', { class: 'wm-card-title' }, item.title || '(无标题)'),
       h('span', { class: 'wm-badge ' + (item.zone === 'cold' ? 'cold' : 'hot') }, item.zone === 'cold' ? '冷' : '热'),
       item.status !== 'active' ? h('span', { class: 'wm-badge warn' }, item.statusLabel || item.status) : null,
@@ -519,6 +611,7 @@ function renderList() {
     );
     return h('div', {
       class: 'wm-card',
+      'data-cat': item.category,
       onclick: () => guard(() => openDetail(item.id))
     }, head, h('div', { class: 'wm-card-text' }, item.preview || item.content || ''), meta);
   });
@@ -683,7 +776,9 @@ function renderAll() {
   renderConsolidation();
   renderWeights();
   renderSide();
+  renderChips();
   renderList();
+  renderView();
   renderTimeline();
   renderDetail();
   renderDiagnostics();
@@ -783,14 +878,12 @@ async function setFilter(patch) {
 }
 
 function renderDiagnostics() {
-  if (!els.diagLayer) return;
+  if (!els.diagPane) return;
   const d = state.diagnostics;
   if (!d) {
-    els.diagLayer.hidden = true;
-    els.diagLayer.replaceChildren();
+    els.diagPane.replaceChildren(h('div', { class: 'wm-loading' }, '读取中…'));
     return;
   }
-  els.diagLayer.hidden = false;
   const health = d.health || {};
   const dot = h('span', { class: 'wm-dot' });
   dot.style.background = health.color || '#6d7782';
@@ -813,45 +906,109 @@ function renderDiagnostics() {
       h('td', null, String(t.ms ?? 0) + 'ms')
     );
   });
-  const modal = h('div', { class: 'wm-modal wm-diag' },
-    h('div', { class: 'wm-modal-head' },
-      h('b', null, '自检'),
+  els.diagPane.replaceChildren(
+    h('div', { class: 'wm-sec-head' },
+      h('span', { class: 'wm-sec-title' }, '自检'),
       dot,
       h('span', { class: 'wm-health-line' }, health.line || ''),
       health.reason ? h('span', { class: 'wm-badge warn' }, health.reason) : null,
       h('span', { class: 'wm-grow' }),
-      h('button', { onclick: closeDiagnostics }, '关闭')
+      h('button', { onclick: () => guard(loadDiagnostics) }, '刷新')
     ),
-    h('div', { class: 'wm-modal-body' },
-      h('div', { class: 'wm-factor' },
-        '连续空手 ' + (health.consecutiveMiss ?? 0) + ' 轮 · 最近命中 ' +
-        (health.lastHitTurnsAgo == null ? '无' : health.lastHitTurnsAgo + ' 轮前') +
-        ' · 窗口 ' + (health.window ?? 30) + ' 轮'),
-      rows.length
-        ? h('div', { class: 'wm-diag-wrap' }, h('table', { class: 'wm-diag-table' },
-          h('thead', null, h('tr', null,
-            h('th', null, '时间'), h('th', null, '模式'), h('th', null, '问句'),
-            h('th', null, '结果'), h('th', null, '命中/原因'), h('th', null, '耗时')
-          )),
-          h('tbody', null, rows)
-        ))
-        : h('div', { class: 'wm-empty' }, '还没有真实轮次')
-    )
+    h('div', { class: 'wm-factor' },
+      '连续空手 ' + (health.consecutiveMiss ?? 0) + ' 轮 · 最近命中 ' +
+      (health.lastHitTurnsAgo == null ? '无' : health.lastHitTurnsAgo + ' 轮前') +
+      ' · 窗口 ' + (health.window ?? 30) + ' 轮'),
+    rows.length
+      ? h('div', { class: 'wm-diag-wrap' }, h('table', { class: 'wm-diag-table' },
+        h('thead', null, h('tr', null,
+          h('th', null, '时间'), h('th', null, '模式'), h('th', null, '问句'),
+          h('th', null, '结果'), h('th', null, '命中/原因'), h('th', null, '耗时')
+        )),
+        h('tbody', null, rows)
+      ))
+      : h('div', { class: 'wm-empty' }, '还没有真实轮次')
   );
-  els.diagLayer.replaceChildren(modal);
 }
 
-async function openDiagnostics() {
-  const data = await api('/diagnostics?limit=30');
-  state.diagnostics = data;
-  state.detail = null;
-  renderDetail();
+async function loadDiagnostics() {
+  try {
+    state.diagnostics = await api('/diagnostics?limit=30');
+  } catch (e) {
+    els.diagPane?.replaceChildren(h('div', { class: 'wm-empty' }, '读取失败：' + (e?.message || e)));
+    return;
+  }
   renderDiagnostics();
 }
 
-function closeDiagnostics() {
-  state.diagnostics = null;
-  renderDiagnostics();
+/* ---------- 主界面三页：条目 / 命中 / 自检（全都不弹层） ---------- */
+const VIEWS = ['list', 'hits', 'diag'];
+
+function setView(view) {
+  state.view = VIEWS.includes(view) ? view : 'list';
+  try { localStorage.setItem('wm-view', state.view); } catch {}
+  renderHeader();
+  renderView();
+}
+
+function renderView() {
+  const view = VIEWS.includes(state.view) ? state.view : 'list';
+  if (els.listPane) els.listPane.hidden = view !== 'list';
+  if (els.hitPane) els.hitPane.hidden = view !== 'hits';
+  if (els.diagPane) els.diagPane.hidden = view !== 'diag';
+  const seg = document.querySelector('.wm-viewseg');
+  if (seg) Array.from(seg.children).forEach((btn, i) => btn.classList.toggle('on', VIEWS[i] === view));
+  if (view === 'hits') loadHits();
+  else if (view === 'diag' && !state.diagnostics) loadDiagnostics();
+}
+
+async function loadHits() {
+  if (!els.hitPane) return;
+  try {
+    const data = await api('/timeline?limit=5000');
+    state.hitLog = (data.items || []).filter((r) => r.type === 'recall' || r.type === 'miss');
+    renderHitLog();
+  } catch (e) {
+    els.hitPane.replaceChildren(h('div', { class: 'wm-empty' }, '读取失败：' + (e?.message || e)));
+  }
+}
+
+function renderHitLog() {
+  const rows = Array.isArray(state.hitLog) ? state.hitLog : [];
+  const titleOf = new Map();
+  for (const item of state.list || []) titleOf.set(item.id, item.title || '(无标题)');
+  const hitRows = rows.filter((r) => r.type === 'recall').length;
+  const head = h('div', { class: 'wm-sec-head' },
+    h('span', { class: 'wm-sec-title' }, '最近 ' + rows.length + ' 轮'),
+    h('span', { class: 'wm-sec-note' }, '命中 ' + hitRows + ' 轮 · 未命中 ' + (rows.length - hitRows) + ' 轮'),
+    h('span', { class: 'wm-grow' }),
+    h('button', { onclick: () => guard(loadHits) }, '刷新')
+  );
+  if (!rows.length) {
+    els.hitPane.replaceChildren(head, h('div', { class: 'wm-empty' }, '还没有记录；跑几轮对话再来。'));
+    return;
+  }
+  const items = rows.slice()
+    .sort((a, b) => String(a.ts).localeCompare(String(b.ts)))
+    .slice(-60)
+    .reverse()
+    .map((row) => {
+    const ids = String(row.detail || '').match(/\b[0-9a-f]{8}\b/g) || [];
+    const isHit = row.type === 'recall';
+    return h('div', { class: 'wm-hit-row' + (isHit ? '' : ' miss') },
+      h('div', { class: 'wm-hit-head' },
+        h('span', { class: 'wm-hit-flag' }, isHit ? '命中 ' + ids.length + ' 条' : '未命中'),
+        h('span', { class: 'wm-hit-time' }, fmtTime(row.ts)),
+        h('span', { class: 'wm-hit-q', title: row.title || '' }, String(row.title || '').slice(0, 46))
+      ),
+      h('div', { class: 'wm-hit-ids' },
+        isHit
+          ? ids.map((id) => h('span', { class: 'wm-hit-id' }, id + ' ' + (titleOf.get(id) || '')))
+          : String(row.detail || '未命中').slice(0, 80)
+      )
+    );
+  });
+  els.hitPane.replaceChildren(head, h('div', { class: 'wm-hit-list' }, ...items));
 }
 
 async function openDetail(id) {
@@ -904,7 +1061,11 @@ async function rollbackSnapshot(name) {
 }
 
 async function boot() {
+  const urlTheme = new URLSearchParams(location.search).get('theme');
+  applyTheme(urlTheme || currentTheme());
+  try { state.view = VIEWS.includes(localStorage.getItem('wm-view')) ? localStorage.getItem('wm-view') : 'list'; } catch { state.view = 'list'; }
   renderShell();
+  renderChips();
   try {
     const mode = await api('/mode');
     state.locked = Boolean(mode.locked);
