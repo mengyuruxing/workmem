@@ -20,7 +20,7 @@ DSH 宿主
             ├─ index.mjs       内存索引（每次加载重建）
             ├─ search.mjs      分词、IDF、打分、门槛、手动搜索
             ├─ mutations.mjs   新建/编辑/合并/归档/作废/恢复
-            ├─ mode.mjs        三模式、自动分类、手动锁
+            ├─ mode.mjs        单一读法（恒 work）
             ├─ policy.mjs      告诉/跑腿/闲聊判断、写入放行/拒绝
             ├─ health.mjs      健康灯、30 轮统计
             ├─ lifecycle.mjs   冷暖计算、每日冷区扫描
@@ -47,8 +47,8 @@ DSH 宿主
 ```
 用户消息
   → dsh 适配层取最后一条可用 user 消息
-  → mode：手动锁 / AI 覆盖 / 本地分类
-  → index：每次加载 5 个文件建索引
+  → mode：恒 work（没有分类器）
+  → index：每次加载 4 个文件建索引
   → search：分词、IDF、打分、门槛
   → 权重：相关分 × 分类权重 × 单条重要度 × 冷热 × 项目
   → 取 topK，拼注入块（带 id/分类/来源）
@@ -99,7 +99,7 @@ memory_write(...)
 
 - 每个条目：id、分类、标题 token 集、关键词 token 集、正文 token 集、完整字串 runs。
 - IDF 在全库 active 条目上计算。
-- 每次 `loadSearchContext` 重建索引；5 个文件规模下开销可接受，没有跨请求缓存。
+- 每次 `loadSearchContext` 重建索引；4 个文件规模下开销可接受，没有跨请求缓存。
 
 ### 3.3 相关分
 
@@ -147,35 +147,26 @@ final = base × categoryWeight × importanceFactor × zoneFactor × projectFacto
 
 ---
 
-## 4. 模式
+## 4. 读法
 
-### 4.1 三档
+### 4.1 只有一种
 
-- `work` 干活：矩阵第 1 列。
-- `mixed` 混合：第 2 列。
-- `companion` 陪人：第 3 列。
+`work` 干活：矩阵第 1 列，也是唯一一列。`MODES = ['work']`。
 
-### 4.2 自动判断
+### 4.2 没有分类器
 
-本地打分，不调模型：
+2026-11-05 删掉了三模式、本地打分分类、平滑、手动锁、AI 覆盖，以及 `workmem_mode_set` 工具。
 
-- 干活信号：命令动词（帮我/去/跑/装/改/查/修/部署/生成）、路径、端口、命令、报错、截止时间。
-- 陪人信号：在吗/陪我/聊聊/无聊/难过/开心/晚安、情绪词、短寒暄。
-- 分数差 + 置信度；置信度低 → 保持上一轮或 `fallback`。
-- 平滑：新结果与当前模式不同时，需要连续两轮同向才切换，避免抖动。
-- 每个会话独立记录当前模式与来源。
+- `resolveMode()` 恒返回 `{ mode: 'work', source: 'fixed', confidence: 1, suggested: 'work', session: {} }`。
+- `mode.mjs` 只保留 `modeLabel` / `modeHint` / `modeOrder` / `categoryWeight` 这些纯展示接口。
 
-### 4.3 覆盖优先级
+### 4.3 老数据
 
-1. 面板手动锁（`mode.locked=true`）。
-2. AI 工具 `memory_mode_set`（本会话有效）。
-3. 本地自动分类。
-
-面板显示：当前模式 + 来源（手动/自动/AI）+ 本模式分类顺序。
+旧 `_settings.json` 的 `auto` / `mixed` / `companion`、旧 `_weights.json` 的 `mixed` / `companion` 列和 `persona` 行，`normalizeSettings` / `normalizeWeights` 读入时静默收口，不报警告。
 
 ### 4.4 扩展
 
-以后加状态 = 在 `_weights.json` 加一列 + 面板矩阵加一列；分类和文件不动。
+以后真需要多列 = 在 `_weights.json` 加一列 + 面板矩阵加一列；分类和文件不动。
 
 ---
 
@@ -290,8 +281,8 @@ final = base × categoryWeight × importanceFactor × zoneFactor × projectFacto
 只做协议转换：
 
 - `agent/pre-step`：取最后一条可用 user 消息 → 调 core → 把注入块作为插件快照消息插在用户消息前；不改写用户原文；失败原样返回。
-- 工具：`memory_write`、`memory_read`、`memory_search`、`memory_update`、`memory_archive`、`memory_revoke`、`memory_snapshot`、`memory_mode_set`。
-- 面板：注册启动入口/侧边栏 tab，加载 `panel/`。
+- 工具：`workmem_write`、`workmem_read`、`workmem_search`、`workmem_update`、`workmem_archive`、`workmem_revoke`、`workmem_snapshot`（7 个；`workmem_mode_set` 已删）。
+- 面板：`client.js` 往 `sidebar.panellist` 注册图标（id=`workmem`，order 30，label「机忆」）、往 `main` 注册 key=`workmem` 的 React 面板；不用 iframe。
 - 子会话（subagent）默认不注入、不写入。
 - 重启 DSH 才生效的改动，先征求主人同意。
 
@@ -315,10 +306,10 @@ final = base × categoryWeight × importanceFactor × zoneFactor × projectFacto
 
 ## 10. 性能与容量
 
-- 5 个文件、几千条以内：启动/变更时全量解析，内存索引，O(N) 打分，足够快。
+- 4 个文件、几千条以内：启动/变更时全量解析，内存索引，O(N) 打分，足够快。
 - 单分类文件 >5 MB 或单条 >20 KB：面板提示；第一版不自动拆分。
 - 每次写入重写一个分类文件；几千条文本量很小。
-- 快照复制 5 个文件 + 边车；目录小，秒级完成。
+- 快照复制 4 个文件 + 边车；目录小，秒级完成。
 - 不做数据库、不做向量索引；以后规模真的变大再考虑，不在第一版。
 
 ---
