@@ -3,13 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>workmem · 工作记忆</title>
-  <link rel="stylesheet" href="./style.css">
+  <title>机忆 · 已并入原生面板</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      font: 14px/1.7 "Hiragino Sans", "Microsoft YaHei", system-ui, sans-serif;
+      background: #f7f5f1; color: #2e2b27;
+    }
+    main { max-width: 560px; padding: 40px 28px; }
+    h1 { font-size: 20px; font-weight: 500; margin: 0 0 12px; }
+    p { margin: 0 0 10px; color: #7d766c; }
+    code { background: #efece6; padding: 1px 5px; border-radius: 5px; font-size: 12px; }
+    ul { padding-left: 20px; color: #7d766c; font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #17161b; color: #eceaf3; }
+      p, ul { color: #9a93a8; }
+      code { background: #232130; }
+    }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <div class="wm-loading">正在读取记忆库…</div>
-  </div>
-  <script type="module" src="./app.js"></script>
+  <main>
+    <h1>机忆已并入 DSH 原生面板</h1>
+    <p>面板界面现在由 DSH 客户端插件直接渲染，不再是这个独立的 HTML 页面。</p>
+    <p>打开方式：左侧栏点「机忆」图标。</p>
+    <p>这个地址只保留 JSON 接口（同源调用），不再提供完整界面：</p>
+    <ul>
+      <li><code>/workmem/panel/stats</code> · 概览</li>
+      <li><code>/workmem/panel/list</code> · 条目列表</li>
+      <li><code>/workmem/panel/search?q=</code> · 手动搜索</li>
+      <li><code>/workmem/panel/weights</code> · 分类权重</li>
+      <li><code>/workmem/panel/diagnostics</code> · 自检</li>
+      <li><code>/workmem/panel/timeline</code> · 时间轴</li>
+    </ul>
+  </main>
 </body>
 </html>

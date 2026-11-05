@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { tempCopy } from './helpers.mjs';
 import { createTools } from '../lib/dsh/tools.mjs';
 import { loadStore } from '../lib/core/store.mjs';
-import { writeSettings, DEFAULT_SETTINGS } from '../lib/core/settings.mjs';
 
 function toolsFor(dir, session = { kind: 'chat', explicit: false }, onMode = null) {
   return Object.fromEntries(createTools({
@@ -108,24 +107,14 @@ test('read, search, update and archive round-trip', async () => {
   }
 });
 
-test('snapshot tool and mode tool', async () => {
+test('snapshot tool works and mode tool is gone', async () => {
   const { dir, cleanup } = tempCopy();
   try {
-    let changed = null;
-    const tools = toolsFor(dir, { kind: 'chat', explicit: false }, (mode) => { changed = mode; });
+    const tools = toolsFor(dir, { kind: 'chat', explicit: false });
     const snap = await tools.workmem_snapshot.execute({ name: 'tool-snap', note: 'test' });
     assert.equal(snap.ok, true);
-    const mode = await tools.workmem_mode_set.execute({ mode: 'companion' });
-    assert.equal(mode.ok, true);
-    assert.equal(changed, 'companion');
-
-    writeSettings(dir, {
-      ...DEFAULT_SETTINGS,
-      mode: { default: 'work', locked: true, fallback: 'mixed' }
-    });
-    const locked = await tools.workmem_mode_set.execute({ mode: 'work' });
-    assert.equal(locked.ok, false);
-    assert.equal(locked.error, 'manual-lock');
+    // 单一工作模式后已没有切模式的工具。
+    assert.equal(tools.workmem_mode_set, undefined);
   } finally {
     cleanup();
   }

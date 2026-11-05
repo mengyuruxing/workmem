@@ -29,7 +29,7 @@ test('adapter registers tools and panel route, and injects a hit', async () => {
   try {
     const { ctx, tools, routes, handlers } = fakeCtx();
     apply(ctx);
-    assert.equal(tools.length, 8);
+    assert.equal(tools.length, 7);
     assert.ok(tools.some((t) => t.name === 'workmem_write'));
     assert.ok(routes.some((r) => r.path === '/workmem/panel' && r.kind === 'prefix'));
     assert.equal(typeof handlers['agent/pre-step'], 'function');

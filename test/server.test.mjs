@@ -14,15 +14,15 @@ test('panel server serves static UI and JSON API on localhost', async () => {
   try {
     const html = await fetch(started.url);
     assert.equal(html.status, 200);
-    assert.match(await html.text(), /工作记忆/);
+    assert.match(await html.text(), /机忆/);
 
+    // 旧的自绘前端已删除，界面由 DSH 客户端插件渲染。
     const js = await fetch(base + '/app.js');
-    assert.equal(js.status, 200);
-    assert.match(js.headers.get('content-type') || '', /javascript/);
+    assert.equal(js.status, 404);
 
     const stats = await fetch(base + '/stats').then((r) => r.json());
     assert.equal(stats.ok, true);
-    assert.equal(stats.data.total, 5);
+    assert.equal(stats.data.total, 4);
 
     const created = await fetch(base + '/write', {
       method: 'POST',

@@ -14,10 +14,10 @@ test('weights default matrix and cell changes', () => {
     const { weights, warnings } = readWeights(dir);
     assert.deepEqual(warnings, []);
     assert.equal(factor(weights, 'rules', 'work'), 2.0);
-    assert.equal(factor(weights, 'persona', 'work'), 0.5);
+    assert.equal(factor(weights, 'progress', 'work'), 1.0);
     assert.equal(importanceFactor(weights, 4), 1.5);
-    const next = setCell(weights, 'persona', 'work', 'normal');
-    assert.equal(factor(next, 'persona', 'work'), 1.0);
+    const next = setCell(weights, 'progress', 'work', 'high');
+    assert.equal(factor(next, 'progress', 'work'), 1.5);
     assert.deepEqual(resetAll(), weights);
   } finally {
     cleanup();
@@ -42,12 +42,13 @@ test('settings merge, clamp and fallback', () => {
     deepDive: { enabled: 1 }
   });
   assert.equal(settings.coldDays, 1);
-  assert.equal(settings.mode.default, 'auto');
-  assert.equal(settings.mode.fallback, 'mixed');
+  // 模式固定为工作模式：传 nonsense/auto 进去也被收口，不再产生警告。
+  assert.equal(settings.mode.default, 'work');
+  assert.equal(settings.mode.fallback, 'work');
   assert.equal(settings.retrieval.minCoverage, 0);
   assert.equal(settings.retrieval.topK, 20);
   assert.equal(settings.deepDive.enabled, true);
-  assert.ok(warnings.length >= 2);
+  assert.ok(warnings.length >= 1);
 });
 
 test('stats bump/use and cold zone', () => {

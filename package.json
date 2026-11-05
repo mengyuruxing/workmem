@@ -2,7 +2,7 @@
   "name": "workmem",
   "version": "0.1.0",
   "type": "module",
-  "description": "Work-first local memory plugin for DSH: 4 work categories + separate persona, 5 category files, local-only retrieval.",
+  "description": "Work-first local memory plugin for DSH: 4 work categories, 4 category files, local-only retrieval.",
   "author": "MOLULISHANGPOLU",
   "license": "MIT",
   "keywords": [
@@ -27,12 +27,16 @@
     ".": "./lib/index.mjs",
     "./client": "./client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
     "./package.json": "./package.json"
   },
   "files": [
     "lib/**",
     "client.js",
     "panel/**",
+    "locale/*.json",
+    "icon.svg",
     "cordis.patch.yml"
   ],
   "engines": {

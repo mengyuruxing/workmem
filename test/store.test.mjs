@@ -5,11 +5,11 @@ import { join } from 'node:path';
 import { tempCopy, tempEmpty } from './helpers.mjs';
 import { initStore, loadCategory, loadStore, nextId, saveCategory, storeStats } from '../lib/core/store.mjs';
 
-test('initStore creates five empty category files and no memories', () => {
+test('initStore creates four empty category files and no memories', () => {
   const { dir, cleanup } = tempEmpty();
   try {
     initStore(dir);
-    for (const file of ['work/rules.md', 'work/facts.md', 'work/pitfalls.md', 'work/progress.md', 'persona/persona.md']) {
+    for (const file of ['work/rules.md', 'work/facts.md', 'work/pitfalls.md', 'work/progress.md']) {
       const path = join(dir, file);
       assert.ok(existsSync(path), file);
       const text = readFileSync(path, 'utf8');
@@ -30,11 +30,11 @@ test('loads the fixture store and keeps categories separate', () => {
   const { dir, cleanup } = tempCopy();
   try {
     const store = loadStore(dir);
-    assert.equal(store.entries.length, 5);
-    assert.equal(store.valid.length, 5);
+    assert.equal(store.entries.length, 4);
+    assert.equal(store.valid.length, 4);
     assert.equal(store.invalid.length, 0);
     assert.equal(store.categories.rules.entries.length, 1);
-    assert.equal(store.categories.persona.entries.length, 1);
+    assert.equal(store.categories.pitfalls.entries.length, 1);
     assert.equal(storeStats(dir).counts.rules, 1);
   } finally {
     cleanup();

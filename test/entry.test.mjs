@@ -32,13 +32,12 @@ test('parses the fixture rules entry', () => {
   assert.equal(entryValid(e), true);
 });
 
-test('parses all five fixture files', () => {
+test('parses all four fixture files', () => {
   const files = {
     rules: 'work/rules.md',
     facts: 'work/facts.md',
     pitfalls: 'work/pitfalls.md',
-    progress: 'work/progress.md',
-    persona: 'persona/persona.md'
+    progress: 'work/progress.md'
   };
   const ids = new Set();
   for (const category of CATEGORIES) {
@@ -48,14 +47,14 @@ test('parses all five fixture files', () => {
     assert.ok(!ids.has(entries[0].id));
     ids.add(entries[0].id);
   }
-  assert.equal(ids.size, 5);
+  assert.equal(ids.size, 4);
 });
 
 test('round-trips all fixture entries without losing fields', () => {
   for (const category of CATEGORIES) {
     const file = {
       rules: 'work/rules.md', facts: 'work/facts.md', pitfalls: 'work/pitfalls.md',
-      progress: 'work/progress.md', persona: 'persona/persona.md'
+      progress: 'work/progress.md'
     }[category];
     const first = parseCategoryFile(readFixture(category, file), category).entries;
     const text = serializeCategoryFile(first, category);

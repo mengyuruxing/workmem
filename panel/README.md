@@ -1,19 +1,35 @@
 # panel
 
-面板前端。全部本地静态资源，由 DSH 宿主加载；不联网、不引 CDN。
+`/workmem/panel/*` 的说明与静态兜底。界面已经不在这一层——它由 `client.js` 在 DSH 原生面板槽里用 React 渲染。
 
-## 布局
+## 这里还剩什么
 
-- 顶部：模式按钮（干活/混合/陪人）+ 自动/手动；健康灯；30 轮小字。
-- 权重区：5×3 矩阵，每格五档点选；当前列高亮；恢复默认。
-- 左侧：分类、只看冷区、状态、项目、来源。
-- 中部：搜索框 + 卡片列表 + 详情/编辑。
-- 底部：时间轴（记/想/改/归档/快照/回滚）。
+- `index.html`：一张说明页，告诉人界面搬哪去了、接口有哪些。访问 `/workmem/panel/` 时返回它。
+- 后端 JSON 接口在 `../lib/panel/api.mjs`，路由挂在宿主 webServer 的 `/workmem/panel` 前缀上。
+
+## 接口
+
+| 路径 | 方法 | 用途 |
+|---|---|---|
+| `/stats` | GET | 概览、健康灯、分类计数、模式（固定 work） |
+| `/sessions` | GET | 按对话聚合 |
+| `/list` | GET | 条目列表，支持 category/status/cold/project/q |
+| `/search` | GET | 手动搜索，带因子拆解 |
+| `/detail` | GET | 单条详情 + 审计（会 bump 使用次数） |
+| `/timeline` | GET | 审计与事件的合并时间轴 |
+| `/diagnostics` | GET | 最近 N 轮检索诊断 |
+| `/weights` | GET / POST | 读 / 改分类权重（只有 work 一列） |
+| `/snapshots` | GET | 快照列表 |
+| `/health` | GET | 健康灯 |
+| `/consolidation` | GET / POST | 整理设置 |
+| `/consolidate` | POST | 立即整理 |
+| `/mode` | GET / POST | 恒返回 work；保留只为老客户端不 404 |
+| `/write` | POST | 新建或编辑 |
+| `/archive` `/revoke` `/restore` | POST | 改状态 |
+| `/snapshot` `/rollback` | POST | 拍快照 / 回滚 |
 
 ## 约束
 
-- 不用滑杆；模式用按钮，权重用五档点选。
-- 卡片必须显示：分类、来源、冷/热、用过几次、写入时间、重要度。
-- 详情必须显示：审计、当前模式实际权重、复制 id。
-- 自检页显示最近 30 轮、未命中原因、差一点命中、因子拆解。
-- 所有请求走 `/workmem/panel/*`，不直接读本地文件。
+- 所有请求同源，走 `/workmem/panel/*`，不直接读本地文件。
+- 跨来源请求由 `lib/panel/guard.mjs` 挡掉；请求体上限 1 MiB。
+- 页面不再引外部 CDN、不再自带主题切换——明暗跟随宿主。

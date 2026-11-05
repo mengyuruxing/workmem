@@ -28,7 +28,7 @@ test('builds an index over active valid fixture entries', () => {
   try {
     const store = loadStore(dir);
     const index = buildIndex(store.entries);
-    assert.equal(index.size, 5);
+    assert.equal(index.size, 4);
     assert.ok(index.idf.size > 0);
   } finally {
     cleanup();
@@ -42,8 +42,7 @@ test('retrieves the expected category for natural queries', () => {
       ['改记忆库之前要做什么', 'rules'],
       ['DSH profile 在哪里', 'facts'],
       ['pnpm 安装 构建 失败', 'pitfalls'],
-      ['workmem 下一步做什么', 'progress'],
-      ['平时怎么称呼主人', 'persona']
+      ['workmem 下一步做什么', 'progress']
     ];
     for (const [query, category] of cases) {
       const result = searchStore(dir, query, { now: Date.parse('2026-11-03T00:00:00+08:00') });
@@ -81,17 +80,20 @@ test('manual search uses the same scorer but no gate', () => {
   }
 });
 
-test('category weight changes ranking between work and companion modes', () => {
+test('category weight drives ranking in the single work mode', () => {
   const { dir, cleanup } = tempCopy();
   try {
-    const work = searchStore(dir, '称呼', { mode: 'work', gate: false, now: Date.parse('2026-11-03T00:00:00+08:00') });
-    const companion = searchStore(dir, '称呼', { mode: 'companion', gate: false, now: Date.parse('2026-11-03T00:00:00+08:00') });
-    const w = work.picks.find((p) => p.entry.category === 'persona');
-    const c = companion.picks.find((p) => p.entry.category === 'persona');
-    assert.ok(w && c);
-    assert.ok(c.final > w.final, `${c.final} should be > ${w.final}`);
-    assert.equal(w.factors.categoryWeight, 0.5);
-    assert.equal(c.factors.categoryWeight, 2);
+    const now = Date.parse('2026-11-03T00:00:00+08:00');
+    const work = searchStore(dir, 'pnpm 安装', { mode: 'work', gate: false, now });
+    // 老 mode 值一律被收口到 work，结果必须与 work 完全一致。
+    const legacy = searchStore(dir, 'pnpm 安装', { mode: 'companion', gate: false, now });
+    const w = work.picks.find((p) => p.entry.category === 'pitfalls');
+    assert.ok(w);
+    assert.equal(w.factors.categoryWeight, 1.5);
+    assert.deepEqual(
+      legacy.picks.map((p) => [p.entry.id, p.final]),
+      work.picks.map((p) => [p.entry.id, p.final])
+    );
   } finally {
     cleanup();
   }
