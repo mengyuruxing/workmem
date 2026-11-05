@@ -18,7 +18,6 @@
     "rules":    { "work": "max",    "mixed": "high",   "companion": "normal" },
     "facts":    { "work": "high",   "mixed": "normal", "companion": "low" },
     "pitfalls": { "work": "high",   "mixed": "normal", "companion": "low" },
-    "progress": { "work": "normal", "mixed": "normal", "companion": "low" },
-    "persona":  { "work": "low",    "mixed": "normal", "companion": "max" }
+    "progress": { "work": "normal", "mixed": "normal", "companion": "low" }
   }
 }

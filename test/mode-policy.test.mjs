@@ -1,42 +1,26 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS } from '../lib/core/settings.mjs';
-import { classifyTurn, resolveMode, setAuto, setManual, modeOrder } from '../lib/core/mode.mjs';
+import { MODE, modeLabel, modeHint, modeOrder, categoryWeight, resolveMode } from '../lib/core/mode.mjs';
 import { canAutoWrite, classifyTurnKind, explicitRemember, isPitfall, policyHint } from '../lib/core/policy.mjs';
 import { DEFAULT_WEIGHTS } from '../lib/core/weights.mjs';
 
-test('classifies work, companion and ambiguous turns', () => {
-  assert.equal(classifyTurn('帮我把插件装好，路径是 E:\\aiwork').mode, 'work');
-  assert.equal(classifyTurn('陪我聊聊，今天好累').mode, 'companion');
-  assert.equal(classifyTurn('今天天气').mode, 'mixed');
-  assert.ok(classifyTurn('帮我把插件装好').confidence > 0.3);
+test('只有一种读法：无论传什么都是 work', () => {
+  assert.equal(MODE, 'work');
+  assert.equal(modeLabel(), '干活');
+  assert.equal(modeHint(), '〔本轮读法：干活〕');
+  assert.equal(resolveMode({ text: '陪我聊聊，今天好累' }).mode, 'work');
+  assert.equal(resolveMode({ text: '帮我把插件装好' }).mode, 'work');
+  assert.equal(resolveMode({ settings: { mode: { locked: true, default: 'companion' } }, aiOverride: 'companion' }).mode, 'work');
 });
 
-test('first auto turn uses suggestion, later switches need two', () => {
-  const first = resolveMode({ settings: DEFAULT_SETTINGS, session: {}, text: '帮我把插件装好' });
-  assert.equal(first.mode, 'work');
-  assert.equal(first.source, 'auto');
-  const second = resolveMode({ settings: DEFAULT_SETTINGS, session: first.session, text: '陪我聊聊，今天好累' });
-  assert.equal(second.mode, 'work');
-  assert.equal(second.session.pendingMode, 'companion');
-  const third = resolveMode({ settings: DEFAULT_SETTINGS, session: second.session, text: '陪我聊聊，今天好累' });
-  assert.equal(third.mode, 'companion');
-});
-
-test('manual lock beats auto and AI', () => {
-  const locked = setManual(DEFAULT_SETTINGS, 'work');
-  const result = resolveMode({ settings: locked, session: {}, text: '陪我聊聊', aiOverride: 'companion' });
-  assert.equal(result.mode, 'work');
-  assert.equal(result.source, 'manual');
-  const auto = setAuto(locked);
-  assert.equal(auto.mode.locked, false);
-  assert.equal(auto.mode.default, 'auto');
-});
-
-test('AI override wins when not manually locked', () => {
-  const result = resolveMode({ settings: DEFAULT_SETTINGS, session: {}, text: '帮我把插件装好', aiOverride: 'companion' });
-  assert.equal(result.mode, 'companion');
-  assert.equal(result.source, 'ai');
+test('权重只剩 work 一列，顺序按矩阵值排', () => {
+  const order = modeOrder(DEFAULT_WEIGHTS);
+  assert.equal(order[0].category, 'rules');
+  assert.equal(order[order.length - 1].category, 'progress');
+  assert.equal(categoryWeight(DEFAULT_WEIGHTS, 'rules'), 2);
+  // 旧的 companion 列已不存在，取值必须等于 work 列。
+  assert.equal(categoryWeight(DEFAULT_WEIGHTS, 'progress'), 1);
 });
 
 test('turn kinds: task, tell, chat and explicit remember', () => {
@@ -61,8 +45,9 @@ test('pitfall detector catches errors and workarounds', () => {
   assert.equal(isPitfall('今天进展顺利'), false);
 });
 
-test('mode order reflects the weight matrix', () => {
-  const order = modeOrder(DEFAULT_WEIGHTS, 'work');
-  assert.equal(order[0].category, 'rules');
-  assert.equal(order[order.length - 1].category, 'persona');
+test('设置里的模式块被强制收口成固定值', () => {
+  assert.equal(DEFAULT_SETTINGS.mode.default, 'work');
+  assert.equal(DEFAULT_SETTINGS.mode.fallback, 'work');
+  assert.equal(DEFAULT_SETTINGS.mode.locked, true);
+  assert.deepEqual(DEFAULT_SETTINGS.retrieval.baseline.modes, ['work']);
 });

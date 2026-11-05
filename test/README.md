@@ -11,7 +11,12 @@
 5. `health`：绿/黄/红迁移、空库、连续 10 轮、30 轮 <10%、写入失败。
 6. `snapshot`：快照 → 修改 → 回滚 → 内容一致；回滚前安全快照。
 7. `weights`：默认矩阵、非法档位补齐、改一格生效。
-8. `mode`：自动分类、平滑、手动锁、AI 覆盖优先级。
+8. `mode-policy`：只有一种读法、权重只剩 work 一列、轮次分类、写入策略、坑检测、设置收口。
+9. `panel-api` / `panel-guard` / `server`：接口形状、跨来源 403、请求体 413、说明页。
+10. `adapter` / `tools`：宿主注册 7 个工具、`workmem_mode_set` 已不存在。
+11. `baseline` / `consolidate` / `consolidation-runtime`：保底注入与自动整理。
+
+当前 `node --test` 共 107 项，全部通过。
 
 ## 样例
 

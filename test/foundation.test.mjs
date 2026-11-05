@@ -10,11 +10,10 @@ const categories = {
   rules: 'work/rules.md',
   facts: 'work/facts.md',
   pitfalls: 'work/pitfalls.md',
-  progress: 'work/progress.md',
-  persona: 'persona/persona.md'
+  progress: 'work/progress.md'
 };
 
-test('fixture has five category files and unique eight-hex ids', () => {
+test('fixture has four category files and unique eight-hex ids', () => {
   const seen = new Set();
   let total = 0;
   for (const [category, file] of Object.entries(categories)) {
@@ -27,7 +26,7 @@ test('fixture has five category files and unique eight-hex ids', () => {
       total += 1;
     }
   }
-  assert.equal(total, 5);
+  assert.equal(total, 4);
 });
 
 test('fixture sidecar json parses', () => {

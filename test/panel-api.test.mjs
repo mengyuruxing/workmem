@@ -12,7 +12,7 @@ test('list view filters by category, status and cold state', () => {
   const { dir, cleanup } = tempCopy();
   try {
     const all = listView(dir, { status: 'all' });
-    assert.equal(all.items.length, 5);
+    assert.equal(all.items.length, 4);
     const facts = listView(dir, { category: 'facts' });
     assert.equal(facts.items.length, 1);
     assert.equal(facts.items[0].categoryLabel, '事实');
@@ -58,11 +58,11 @@ test('stats, weights and timeline views are populated', () => {
   const { dir, cleanup } = tempCopy();
   try {
     const stats = statsView(dir, { mode: 'work' });
-    assert.equal(stats.total, 5);
+    assert.equal(stats.total, 4);
     assert.equal(stats.categories.rules.label, '规矩');
     assert.ok(stats.health.status);
     const weights = weightsView(dir, { mode: 'work' });
-    assert.equal(weights.rows.length, 5);
+    assert.equal(weights.rows.length, 4);
     assert.equal(weights.rows[0].cells.work.level, 'max');
     assert.equal(weights.modeLabel, '干活');
     const timeline = timelineView(dir, { limit: 20 });
@@ -112,7 +112,7 @@ test('api writes, edits, archives and restores', async () => {
     });
     assert.equal(created.body.ok, true);
     const id = created.body.data.id;
-    assert.equal(loadStore(dir).entries.length, 6);
+    assert.equal(loadStore(dir).entries.length, 5);
 
     const edited = await handlePanelRequest(dir, {
       method: 'POST', url: '/workmem/panel/write',
@@ -133,23 +133,24 @@ test('api writes, edits, archives and restores', async () => {
   }
 });
 
-test('api adjusts weights and mode with audit', async () => {
+test('api adjusts weight and answers mode as fixed', async () => {
   const { dir, cleanup } = tempCopy();
   try {
     const w = await handlePanelRequest(dir, {
       method: 'POST', url: '/workmem/panel/weights',
-      body: { category: 'persona', mode: 'work', level: 'normal' }
+      body: { category: 'facts', level: 'normal' }
     });
     assert.equal(w.body.ok, true);
-    const cell = w.body.data.rows.find((r) => r.category === 'persona').cells.work;
+    const cell = w.body.data.rows.find((r) => r.category === 'facts').cells.work;
     assert.equal(cell.level, 'normal');
-    assert.ok(readAudit(dir, { itemId: null }).some((r) => r.field === 'weights.persona.work'));
+    assert.ok(readAudit(dir, { itemId: null }).some((r) => r.field === 'weights.facts'));
 
-    const m = await handlePanelRequest(dir, { method: 'POST', url: '/workmem/panel/mode', body: { mode: 'work' } });
+    // 模式固定：POST 什么都回 work/locked，不改设置。
+    const m = await handlePanelRequest(dir, { method: 'POST', url: '/workmem/panel/mode', body: { mode: 'auto' } });
     assert.equal(m.body.ok, true);
     assert.equal(m.body.data.locked, true);
-    const auto = await handlePanelRequest(dir, { method: 'POST', url: '/workmem/panel/mode', body: { mode: 'auto' } });
-    assert.equal(auto.body.data.locked, false);
+    assert.equal(m.body.data.default, 'work');
+    assert.deepEqual(Object.keys(m.body.data.labels), ['work']);
   } finally {
     cleanup();
   }

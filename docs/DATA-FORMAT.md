@@ -15,11 +15,10 @@
     facts.md          事实
     pitfalls.md       坑
     progress.md       进度
-  persona/
-    persona.md        人设
   _stats.json         命中/打开次数、最后被碰时间
-  _weights.json       5×3 权重矩阵与档位数值
+  _weights.json       4×1 权重矩阵与档位数值（只有 work 一列）
   _settings.json      冷暖期限、健康阈值、检索门槛、深挖开关
+  _consolidation.json 整理游标与上次结果
   _audit/
     edits.jsonl       修改审计（追加）
   _logs/
@@ -28,7 +27,8 @@
     20261102-153000/  整目录快照
 ```
 
-- 记忆正文只有 5 个文件。
+- 记忆正文只有 4 个文件。
+- 2026-11-05 起第 5 类 `persona` 已删除；老目录里的 `persona/persona.md` 不再被读取。
 - 边车文件不是记忆本体；删掉统计不会丢正文，删掉正文就是丢记忆。
 - 快照是数据目录的副本，不含 `_snapshots` 自身。
 
@@ -153,7 +153,7 @@
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "levels": {
     "ignore": 0,
     "low": 0.5,
@@ -169,18 +169,18 @@
   },
   "coldFactor": 0.7,
   "matrix": {
-    "rules":    { "work": "max",    "mixed": "high",   "companion": "normal" },
-    "facts":    { "work": "high",   "mixed": "normal", "companion": "low" },
-    "pitfalls": { "work": "high",   "mixed": "normal", "companion": "low" },
-    "progress": { "work": "normal", "mixed": "normal", "companion": "low" },
-    "persona":  { "work": "low",    "mixed": "normal", "companion": "max" }
+    "rules":    { "work": "max" },
+    "facts":    { "work": "high" },
+    "pitfalls": { "work": "high" },
+    "progress": { "work": "normal" }
   }
 }
 ```
 
-- 分类键：`rules` / `facts` / `pitfalls` / `progress` / `persona`。
-- 模式键：`work` / `mixed` / `companion`。
-- 非法档位、缺列：按默认值补齐，并记警告；不阻塞启动。
+- 分类键：`rules` / `facts` / `pitfalls` / `progress`。
+- 模式键：只有 `work`。
+- 老文件里多出来的 `mixed` / `companion` 列和 `persona` 行：静默丢弃，不记警告。
+- 缺列（比如某分类没有 `work`）：按默认值补齐，并记警告；不阻塞启动。
 - 面板改一格，立即写回本文件并记审计。
 
 ---
@@ -189,12 +189,12 @@
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "coldDays": 14,
   "mode": {
-    "default": "auto",
-    "locked": false,
-    "fallback": "mixed"
+    "default": "work",
+    "locked": true,
+    "fallback": "work"
   },
   "retrieval": {
     "topK": 3,
@@ -209,7 +209,7 @@
       "maxItems": 1,
       "maxChars": 300,
       "category": "rules",
-      "modes": ["work", "mixed"]
+      "modes": ["work"]
     }
   },
   "health": {
@@ -241,9 +241,7 @@
 }
 ```
 
-- `mode.default`：`auto` / `work` / `mixed` / `companion`。
-- `mode.locked`：手动锁定；true 时自动分类不生效。
-- `fallback`：自动分类置信度太低时用的模式。
+- `mode` 整块是兼容字段：`normalizeSettings` 一律覆盖成 `{ default: 'work', locked: true, fallback: 'work' }`，老文件里的 `auto` / `mixed` / `companion` 不报错也不生效。
 - `retrieval.baseline`：保底规矩；每轮固定 1 条，绕过相关度门槛。
 - `health.yellowNoWrite*`：有库但长时间没写入的黄灯阈值。
 - `consolidation.*`：整理开关、轮数、条数上限、范围；手动和自动共用。
@@ -292,8 +290,8 @@
 | actor | 主人 / 小喵 / 系统 / 文件 |
 | action | create / update / archive / revoke / restore / weights / mode / consolidation |
 | item_id | 条目 id；权重修改为 null |
-| category | rules/facts/pitfalls/progress/persona；权重修改为 null |
-| field | content/title/source/importance/project/keywords/status/weights.rules.work 等 |
+| category | rules/facts/pitfalls/progress；权重修改为 null |
+| field | content/title/source/importance/project/keywords/status/weights.rules 等 |
 | before | 改前值（长文本截断到 2000 字，完整旧文靠快照） |
 | after | 改后值 |
 | note | 备注 |
@@ -316,7 +314,7 @@
   "type": "turn",
   "sid": "ab54c648",
   "mode": "work",
-  "modeSource": "auto",
+  "modeSource": "fixed",
   "query": "如果不行，就帮我把反代模型弄进去",
   "candidates": 12,
   "passed": 2,
@@ -359,7 +357,6 @@
 _snapshots/
   20261102-153000/
     work/*.md
-    persona/*.md
     _stats.json
     _weights.json
     _settings.json
@@ -372,7 +369,7 @@ _snapshots/
 - 创建：复制数据目录（排除 `_snapshots`）。
 - 回滚：
   1. 先创建 `pre-rollback-YYYYMMDD-HHmmss` 安全快照；
-  2. 用目标快照覆盖 `work/`、`persona/` 和边车；
+  2. 用目标快照覆盖 `work/` 和边车；
   3. 记 `rollback` 事件与审计；
   4. 保留目标快照，不删。
 - 不自动删除快照。
@@ -386,7 +383,7 @@ _snapshots/
 - 写前检查文件 mtime：
   - 与上次读取一致 → 正常写；
   - 已被外部修改 → 中止，返回“文件已被外部修改，请刷新后重试”，不覆盖。
-- 不做跨请求缓存；每次检索/面板请求按 5 个文件重建内存索引。
+- 不做跨请求缓存；每次检索/面板请求按 4 个文件重建内存索引。
 - 解析失败：保留原文件，不写回；面板显示损坏条目；健康灯红（读不了/解析不了）。
 - 任何写失败：记 `write` 事件 `ok=false`，健康灯红。
 
